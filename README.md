@@ -18,6 +18,10 @@
 택배가 담긴 **Cargo Pod를 IW Hub AMR이 운반**하고, **P3020 IN이 RGB-D + YOLO로 박스를 인식해 Conveyor에 올리면**, **Wheel Sorter가 지역별로 분류**하고 Reject Line의 박스는 **P3020 OUT이 Reject Bin에 적재**합니다. 전 과정을 **Isaac Sim 5.1 + ROS 2 Jazzy 디지털 트윈**에서 하나의 미션으로 연결하고, **React Control Tower**에서 실시간으로 관제합니다.
 
 > 두산 로보틱스 ROKEY Boot Camp 9기 · 협동-3 · C2조 **4명** — 정의석(팀장) · 정동휘 · 황인재 · 서진우 · 2026.08.14 ~ 08.28
+>
+> 팀 저장소 [rokey-c2/cobot3-ws-c2](https://github.com/rokey-c2/cobot3-ws-c2)를 fork하여 담당 역할을 덧붙인 개인 포트폴리오 버전입니다.
+>
+> **담당 역할(황인재):** P3020 IN Pick & Place · 비전 결과 연동 · Pick & Place 액션 서버 · P3020 OUT 에이전트 → [담당 역할](#-담당-역할)
 
 <p align="center">
   <img src="docs/screenshots/web1-1-1.png" width="900" alt="Warehouse Top View — AMR, P3020 IN·OUT, Conveyor와 Wheel Sorter를 포함한 Control Tower 관제 화면"><br>
@@ -283,17 +287,37 @@ AMR 운반 → P3020 IN 작업 → Conveyor·Sorter 분류 / AMR 복귀 순서�
 
 [전체 다이어그램을 Archify 뷰어에서 살펴보기](https://cobot3-ws-c2-architectures.netlify.app/)
 
-## 🧩 기술적 도전 · 해결
+## 🙋 담당 역할
 
-Isaac Sim 내장 Python과 시스템 ROS 2의 경계, 시뮬레이션 좌표와 동선처럼 통합 단계에서 드러난 문제를 하나씩 고쳤습니다.
+**황인재 — P3020 로봇팔 · 비전 연동.** 입고 측 P3020 IN의 Pick & Place와 카메라 비전 연동을 맡았고, Pick & Place 액션 서버와 출고 측 P3020 OUT 에이전트를 함께 맡았습니다.
 
-| 문제 | 원인 → 해결 | 결과 |
-|---|---|---|
-| Isaac Sim 안에서 커스텀 액션 서버(`PickPlace`)를 만들면 `Type support not from this implementation` 오류 | Isaac Sim 내장 Python 3.11과 시스템 ROS 2(Python 3.12)의 타입 지원이 맞지 않음 → 액션 서버를 시스템 Python 프로세스로 분리하고, Isaac Sim과는 표준 타입(`std_msgs/String` JSON 토픽 2개)으로만 연결 | goal 수락 · feedback 정상 |
-| 이송 중 박스가 벽 · 컨베이어에 걸림 | 이송 높이를 그리퍼 기준으로 잡아 박스는 0.31 m 아래로 지나감 → 박스 바닥 기준 최소 이송 높이로 변경 | 충돌 사라짐 |
-| 박스 1개만 옮기고 AMR이 복귀함 | 박스 하나의 `DONE_SUCCESS`를 액션 종료로 처리 → 박스 단위 피드백과 종료 신호(`CARGO_EMPTY`)를 분리 | 화물이 빌 때까지 연속 처리 |
-| 맵을 고칠 때마다 하드코딩한 로봇 좌표가 깨짐 | 실행 시 USD prim의 world transform에서 로봇 베이스 pose를 직접 읽어 IK에 반영 | 맵이 바뀌어도 다시 잴 필요 없음 |
-| 노란 AMR 몸체가 박스 색 조건을 통과해 오검출 | 색상 대신 높이(world Z) 기준으로 오검출을 거름 | 박스만 작업 대상으로 남음 |
+- **P3020 IN Pick & Place** — 8단계 동작 흐름(접근 → 하강 → 파지 → 들기 → 이동 → 내리기 → 놓기 → 완료)과 Lula IK로 박스를 집어 컨베이어에 올립니다. 박스 위치에 맞춰 그리퍼 방향(yaw)을 정하고, VGP20 흡착은 흡착 컵과 박스 사이 거리로 붙잡는 방식으로 모사했습니다. 이송 높이는 박스 바닥 기준으로 잡고, 로봇 베이스 위치는 실행 시 USD에서 읽어 맵이 바뀌어도 다시 잴 필요가 없게 했습니다. → [트러블슈팅 2 · 4](#-트러블슈팅)
+- **비전 결과 연동** — YOLO가 찾은 박스 픽셀(`/box_pixel`)과 Depth로 world 좌표를 계산하고, 중간 높이에서 한 번 더 검출해 위치를 보정합니다. 노란 AMR 몸체처럼 색 조건을 통과하는 오검출은 높이(world Z) 기준으로 거릅니다. → [트러블슈팅](#-트러블슈팅)
+- **반복 처리 · 종료 신호** — 박스 수를 미리 정하지 않고, 5초 동안 박스가 보이지 않으면 `CARGO_EMPTY`로 AMR 복귀를 요청합니다. 박스 단위 진행은 피드백으로, 작업 종료는 이 신호 하나로 나눴습니다. → [트러블슈팅 3](#-트러블슈팅)
+- **런타임 분리 · 액션 서버** — Isaac Sim 내장 Python 3.11과 시스템 ROS 2(Python 3.12)의 타입이 맞지 않아, `/p3020/pick_place` 액션 서버를 시스템 Python 프로세스로 분리하고 표준 타입 토픽 2개로 연결했습니다. → [트러블슈팅 1](#-트러블슈팅)
+- **P3020 OUT 에이전트** — IN 에이전트의 동작 흐름 · IK · 비전 로직을 그대로 재사용해, Reject Line의 박스를 Reject Bin으로 옮기는 출고 측 에이전트를 만들고 적재 계획 모듈(`OutboundLoadPlanner`)을 실제 에이전트에 처음 연결했습니다.
+
+## 🧩 트러블슈팅
+
+아래는 **팀이 함께 푼 문제**입니다(파트 담당은 [팀 · 역할](#-팀--역할), 제가 직접 맡은 일은 [담당 역할](#-담당-역할)).
+
+통합 단계에서 드러난 런타임 경계 · 좌표 · 동선 문제를 하나씩 고쳤습니다. 대표 4건이고, 나머지 1건은 아래에 접어 두었습니다.
+
+| 문제 | 원인 | 어떻게 해결했나 | 결과 |
+|---|---|---|---|
+| Isaac Sim 안 커스텀 액션 서버의 타입 오류 | 내장 Python 3.11과 ROS 2(3.12)의 타입이 안 맞음 | 액션 서버를 시스템 Python으로 분리 · 표준 타입 토픽으로만 연결 | goal 수락 · feedback 정상 |
+| 이송 중 박스가 벽 · 컨베이어에 걸림 | 이송 높이를 그리퍼 기준으로 잡음 | 박스 바닥 기준 최소 이송 높이로 변경 | 충돌 없음 |
+| 박스 1개만 옮기고 AMR이 복귀 | 박스 하나의 완료를 작업 전체 종료로 처리 | 박스 단위 진행 알림과 종료 신호(`CARGO_EMPTY`) 분리 | 화물이 빌 때까지 연속 처리 |
+| 맵을 고칠 때마다 로봇 좌표가 깨짐 | 로봇 좌표를 코드에 직접 적어 둠 | 실행 시 USD 파일에서 로봇 위치를 읽어 IK에 반영 | 맵이 바뀌어도 다시 잴 필요 없음 |
+
+<details>
+<summary>나머지 1건 보기 — 비전 오검출</summary>
+
+| 문제 | 원인 | 어떻게 해결했나 | 결과 |
+|---|---|---|---|
+| 노란 AMR 몸체를 박스로 오검출 | 색 조건만으로 박스를 거름 | 높이(world Z) 기준으로 거름 | 박스만 작업 대상으로 남음 |
+
+</details>
 
 ## 📊 결과
 
@@ -317,10 +341,10 @@ Isaac Sim 내장 Python과 시스템 ROS 2의 경계, 시뮬레이션 좌표와 
 
 | 이름 | 역할 | 맡은 것 |
 |---|---|---|
-| 정의석 | 팀장 | 입고 AMR 운행 구현, 전체 Flow 관제 시스템(Control Tower) 제작 |
-| 정동휘 | 팀원 | Isaac Sim 공정 환경 구축, Conveyor & Wheel Sorter 구현 |
-| 황인재 | 팀원 | P3020 Pick & Place 구현, 입고 Camera Vision 인식 + Pick & Place 연동 |
-| 서진우 | 팀원 | YOLO & numpy 박스 인식 모듈 구현, 상자 적재 알고리즘 |
+| 정⁠의⁠석 | 팀장 | 입고 AMR 운행 구현, 전체 Flow 관제 시스템(Control Tower) 제작 |
+| 정⁠동⁠휘 | 팀원 | Isaac Sim 공정 환경 구축, Conveyor & Wheel Sorter 구현 |
+| 황⁠인⁠재 | 팀원 | P3020 Pick & Place 구현, 입고 Camera Vision 인식 + Pick & Place 연동 → [담당 역할](#-담당-역할) |
+| 서⁠진⁠우 | 팀원 | YOLO & numpy 박스 인식 모듈 구현, 상자 적재 알고리즘 |
 
 ## 🤝 개발 · 협업 방식
 
