@@ -403,7 +403,7 @@ svg[data-preset="editorial"][data-animation="trace"] [data-animate="node"] { ani
   50% { opacity: 0.48; transform: scale(0.78); }
 }
 :root, svg { --bg: #f4f5f7; --grid: #e9edf2; --canvas-dot: #d9dee5; --text: #111827; --text-muted: #5b6474; --text-dim: #9aa3b2; --text-faint: #6b7280; --panel: #ffffff; --panel-border: #e5e7eb; --lane-fill: rgba(248, 250, 252, 0.65); --lane-stroke: #cbd5e1; --arrow: #94a3b8; --arrow-emphasis: #059669; --mask: #ffffff; --frontend-fill: rgba(34, 211, 238, 0.15); --frontend-stroke: #0891b2; --backend-fill: rgba(52, 211, 153, 0.18); --backend-stroke: #059669; --database-fill: rgba(167, 139, 250, 0.2); --database-stroke: #7c3aed; --cloud-fill: rgba(251, 191, 36, 0.18); --cloud-stroke: #d97706; --security-fill: rgba(251, 113, 133, 0.15); --security-stroke: #e11d48; --messagebus-fill: rgba(251, 146, 60, 0.15); --messagebus-stroke: #ea580c; --external-fill: rgba(148, 163, 184, 0.18); --external-stroke: #64748b; --toolbar-bg: rgba(255, 255, 255, 0.92); --toolbar-border: #cbd5e1; --toolbar-text: #334155; --toolbar-hover: #ffffff; --toolbar-menu-bg: #ffffff; }
-</style><rect x="0" y="0" width="1563" height="1160" fill="#020617"/>
+svg > text.t-primary { fill: #f8fafc !important; } svg > text.t-muted { fill: #a5b4c8 !important; }</style><rect x="0" y="0" width="1563" height="1160" fill="#020617"/>
         <title id="archify-diagram-title">cobot3-ws-c2 — System Architecture</title>
         <desc id="archify-diagram-description">Control Tower · MQTT · Host ROS 2 Jazzy · Isaac Sim Runtime · code-grounded @ cf7feac</desc>
         <!-- Definitions -->
@@ -675,15 +675,15 @@ svg[data-preset="editorial"][data-animation="trace"] [data-animate="node"] { ani
         <text x="1280" y="883" class="t-muted" font-size="9" text-anchor="middle">Simulated robot</text>
         </g>
 
-        <g id="node-sensor" data-node-id="sensor" data-node-label="IW Hub ROS2 Graphs" tabindex="0" role="button" aria-label="Focus IW Hub ROS2 Graphs, Nav I/O graph · cmd_vel / sensor / odom / TF, Isaac Sim 5.1 Runtime" aria-pressed="false" data-node-kind="external" data-node-sublabel="Nav I/O graph · cmd_vel / sensor / odom / TF" data-node-context="Isaac Sim 5.1 Runtime">
-          <title>IW Hub ROS2 Graphs · Nav I/O graph · cmd_vel / sensor / odom / TF · Isaac Sim 5.1 Runtime</title>
+        <g id="node-sensor" data-node-id="sensor" data-node-label="IW Hub ROS 2 Graphs" tabindex="0" role="button" aria-label="Focus IW Hub ROS 2 Graphs, Nav I/O graph · cmd_vel / sensor / odom / TF, Isaac Sim 5.1 Runtime" aria-pressed="false" data-node-kind="external" data-node-sublabel="Nav I/O graph · cmd_vel / sensor / odom / TF" data-node-context="Isaac Sim 5.1 Runtime">
+          <title>IW Hub ROS 2 Graphs · Nav I/O graph · cmd_vel / sensor / odom / TF · Isaac Sim 5.1 Runtime</title>
           <rect x="180" y="990" width="220" height="82" rx="6" class="c-mask"/>
           <rect x="180" y="990" width="220" height="82" rx="6" class="c-external" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(186 996) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" x="290" y="1029" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">IW Hub ROS2 Graphs</text>
+          <text data-node-label="" x="290" y="1029" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">IW Hub ROS 2 Graphs</text>
         <text x="290" y="1045" class="t-muted" font-size="8" text-anchor="middle">Nav I/O graph · cmd_vel / sensor / odom / TF</text>
         </g>
 
