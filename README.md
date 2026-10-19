@@ -21,7 +21,7 @@
 >
 > 팀 저장소 [rokey-c2/cobot3-ws-c2](https://github.com/rokey-c2/cobot3-ws-c2)를 fork하여 담당 역할을 덧붙인 개인 포트폴리오 버전입니다.
 >
-> **담당 역할(황인재):** P3020 IN Pick & Place · 비전 결과 연동 · Pick & Place 액션 서버 · P3020 OUT 에이전트 → [담당 역할](#-담당-역할)
+> **담당 역할(황인재):** P3020 입고(IN) · 출고(OUT) 담당 — IN Pick & Place · 비전 결과 연동 · Pick & Place 액션 서버 · OUT 에이전트 → [담당 역할](#-담당-역할)
 
 <p align="center">
   <img src="docs/screenshots/web1-1-1.png" width="900" alt="Warehouse Top View — AMR, P3020 IN·OUT, Conveyor와 Wheel Sorter를 포함한 Control Tower 관제 화면"><br>
@@ -51,7 +51,7 @@
 
 <p align="center">
   <a href="docs/screenshots/isaac-sim-record-x5.gif"><img src="docs/screenshots/isaac-sim-record-x5.gif" width="900" alt="Isaac Sim Warehouse 전체 공정"></a><br>
-  <sub><b>Warehouse Simulation · 5×</b> — AMR · P3020 · Conveyor가 연동되는 전체 시뮬레이션</sub>
+  <sub><b>Warehouse Simulation · 5×</b> — AMR 운반부터 P3020 OUT의 Reject Bin 적재까지 전체 공정</sub>
 </p>
 
 <table>
@@ -106,7 +106,7 @@ isaac_sim/usd/parcel_sorting_map/navigation/maps/parcel_sorting_map.yaml
 </details>
 
 ### 🦾 Vision + P3020 IN — 박스를 찾아 반복 Pick & Place
-P3020 IN·OUT의 RGB/Depth 카메라와 YOLO 결과를 이용해 Pick & Place 대상을 검출합니다. `TARGET LOCKED` 상태에서는 초록색 테두리, 중앙 조준점, 검출 신뢰도를 함께 표시합니다. 박스 검출 모델의 학습과 ONNX 변환 과정은 아래 '자세히'에 있습니다.
+P3020 IN·OUT의 RGB/Depth 카메라와 YOLO 결과를 이용해 Pick & Place 대상을 검출합니다. `TARGET LOCKED` 상태에서는 초록색 테두리, 중앙 조준점, 검출 신뢰도를 함께 표시합니다. 박스 검출 모델의 학습과 ONNX 변환 과정(학습 담당: 서진우)은 아래 '자세히'에 있습니다.
 
 <table>
   <tr>
@@ -155,7 +155,9 @@ isaac_sim/robots/p3020/vision/object_detector.py
 models/parcel_box_yolo_model/best.onnx
 ```
 
-#### YOLO 박스 검출 모델 학습 · ONNX 변환
+#### YOLO 박스 검출 모델 학습 · ONNX 변환 (학습 담당: 서진우)
+
+> 모델 학습은 서진우가 맡았습니다. 황인재는 학습된 모델의 결과(`/box_pixel`)를 Depth와 합쳐 Pick & Place에 연동했습니다.
 
 | 단계 | 파일 | 내용 |
 |---|---|---|
@@ -305,13 +307,13 @@ AMR 운반 → P3020 IN 작업 → Conveyor·Sorter 분류 / AMR 복귀 순서�
 
 ## 🙋 담당 역할
 
-**황인재 — P3020 로봇팔 · 비전 연동.** 입고 측 P3020 IN의 Pick & Place와 카메라 비전 연동을 맡았고, Pick & Place 액션 서버와 출고 측 P3020 OUT 에이전트를 함께 맡았습니다.
+**황인재 — P3020 입고(IN) · 출고(OUT) 담당.** 입고 측 P3020 IN의 Pick & Place와 카메라 비전 결과 연동을 맡았고, Pick & Place 액션 서버와 출고 측 P3020 OUT 에이전트를 함께 맡았습니다.
 
 - **P3020 IN Pick & Place** — 8단계 동작 흐름(접근 → 하강 → 파지 → 들기 → 이동 → 내리기 → 놓기 → 완료)과 Lula IK로 박스를 집어 컨베이어에 올립니다. 박스 위치에 맞춰 그리퍼 방향(yaw)을 정하고, VGP20 흡착은 흡착 컵과 박스 사이 거리로 붙잡는 방식으로 모사했습니다. 이송 높이는 박스 바닥 기준으로 잡고, 로봇 베이스 위치는 실행 시 USD에서 읽어 맵이 바뀌어도 다시 잴 필요가 없게 했습니다. → [트러블슈팅 2 · 4](#-트러블슈팅)
 - **비전 결과 연동** — YOLO가 찾은 박스 픽셀(`/box_pixel`)과 Depth로 world 좌표를 계산하고, 중간 높이에서 한 번 더 검출해 위치를 보정합니다. 노란 AMR 몸체처럼 색 조건을 통과하는 오검출은 높이(world Z) 기준으로 거릅니다. → [트러블슈팅(나머지 1건)](#-트러블슈팅)
 - **반복 처리 · 종료 신호** — 박스 수를 미리 정하지 않고, 5초 동안 박스가 보이지 않으면 `CARGO_EMPTY`로 AMR 복귀를 요청합니다. 박스 단위 진행은 피드백으로, 작업 종료는 이 신호 하나로 나눴습니다. → [트러블슈팅 3](#-트러블슈팅)
 - **런타임 분리 · 액션 서버** — Isaac Sim 내장 Python 3.11과 시스템 ROS 2(Python 3.12)의 타입이 맞지 않아, `/p3020/pick_place` 액션 서버를 시스템 Python 프로세스로 분리하고 표준 타입 토픽 2개로 연결했습니다. → [트러블슈팅 1](#-트러블슈팅)
-- **P3020 OUT 에이전트** — IN 에이전트의 동작 흐름 · IK · 비전 로직을 그대로 재사용해, Reject Line의 박스를 Reject Bin으로 옮기는 출고 측 에이전트를 만들고 적재 계획 모듈(`OutboundLoadPlanner`)을 실제 에이전트에 처음 연결했습니다.
+- **P3020 OUT 에이전트** — IN 에이전트의 동작 흐름 · IK · 비전 로직을 그대로 재사용해, Reject Line의 박스를 Reject Bin으로 옮기는 출고 측 에이전트를 맡고 적재 계획 모듈(`OutboundLoadPlanner`)을 실제 에이전트에 처음 연결했습니다.
 
 ## 🧩 트러블슈팅
 
@@ -337,7 +339,7 @@ AMR 운반 → P3020 IN 작업 → Conveyor·Sorter 분류 / AMR 복귀 순서�
 
 ## 📊 결과
 
-- 입고 AMR 운반 → P3020 IN 반복 Pick & Place → Conveyor → Wheel Sorter 분류 → P3020 OUT Reject Bin 적재까지 **전 공정을 한 미션으로 연결**했습니다(위 시연 GIF).
+- 입고 AMR 운반 → P3020 IN 반복 Pick & Place → Conveyor → Wheel Sorter 분류 → P3020 OUT Reject Bin 적재까지 **전 공정을 한 미션으로 연결**했습니다(위 시연 GIF). 프로젝트 기간(8/28 제출본)에는 불량 박스가 P3020 OUT 앞에 도착하는 데까지 확인했고, Reject Bin 적재는 이후 보완해 완성했습니다.
 - 박스 수를 미리 정하지 않고, 화물이 빌 때까지(5초 동안 미검출 → `CARGO_EMPTY`) 반복 처리한 뒤 AMR 복귀를 요청합니다.
 - Control Tower에서 공정 상태 · 처리 내역 · AMR 상태 · 카메라 스트림을 실시간으로 확인합니다.
 
@@ -350,8 +352,15 @@ AMR 운반 → P3020 IN 작업 → Conveyor·Sorter 분류 / AMR 복귀 순서�
 
 **한계**
 
+- AMR 쪽의 리소스 사용을 줄이는 방법을 프로젝트 기간 안에 찾지 못했습니다.
+- 반복 시험으로 정량 성공률을 측정하지 않았습니다.
 - Isaac Sim 시뮬레이션에서만 검증했고 실제 장비로는 하지 않았습니다.
-- 세부 사항을 충분히 검토하지 못했고, PC 사양(GPU 리소스)을 반영하지 않고 계획해 리소스가 부족했습니다.
+
+**다음 단계**
+
+- AMR 쪽 리소스 사용을 줄이는 방법 찾기
+- 같은 시나리오를 반복 시험해 Pick & Place · 분류 성공률 측정
+- 같은 ROS 2 인터페이스를 실제 AMR · 협동로봇 · 카메라에 연결하고 좌표 · 노이즈 · 통신 지연을 보정하는 sim-to-real 검증
 
 ## 👥 팀 · 역할
 
@@ -359,7 +368,7 @@ AMR 운반 → P3020 IN 작업 → Conveyor·Sorter 분류 / AMR 복귀 순서�
 |---|---|---|
 | 정⁠의⁠석 | 팀장 | 입고 AMR 운행 구현, 전체 Flow 관제 시스템(Control Tower) 제작 |
 | 정⁠동⁠휘 | 팀원 | Isaac Sim 공정 환경 구축, Conveyor & Wheel Sorter 구현 |
-| 황⁠인⁠재 | 팀원 | P3020 Pick & Place 구현, 입고 Camera Vision 인식 + Pick & Place 연동 → [담당 역할](#-담당-역할) |
+| 황⁠인⁠재 | 팀원 | P3020 입고(IN) · 출고(OUT) Pick & Place 담당, 입고 카메라 비전 결과 + Pick & Place 연동 → [담당 역할](#-담당-역할) |
 | 서⁠진⁠우 | 팀원 | YOLO & numpy 박스 인식 모듈 구현, 상자 적재 알고리즘 |
 
 ## 🤝 개발 · 협업 방식
@@ -545,12 +554,12 @@ Node.js/npm은 별도로 설치합니다. Ubuntu 기본 `nodejs` 패키지는 �
 ### 8.2 프로젝트 준비
 
 ```bash
-git clone https://github.com/rokey-c2/cobot3-ws-c2.git
-cd cobot3-ws-c2
+git clone https://github.com/hwang-injae/amr-cobot-sorting.git
+cd amr-cobot-sorting
 git switch main
 ```
 
-> Isaac Sim USD와 에셋이 포함되어 있어 clone 용량이 큽니다(수 GB). 이력이 필요 없다면 `git clone --depth 1 https://github.com/rokey-c2/cobot3-ws-c2.git`로 최신 파일만 받을 수 있습니다.
+> Isaac Sim USD와 에셋이 포함되어 있어 clone 용량이 큽니다(수 GB). 이력이 필요 없다면 `git clone --depth 1 https://github.com/hwang-injae/amr-cobot-sorting.git`로 최신 파일만 받을 수 있습니다.
 
 ### 8.3 환경 파일
 
@@ -631,7 +640,7 @@ bash scripts/check_environment.sh
 <details>
 <summary>실행 순서 — Terminal 1 ~ 10</summary>
 
-**중요:** 아래 각 Terminal은 모두 **`cobot3-ws-c2` 프로젝트 root에서 시작**합니다.
+**중요:** 아래 각 Terminal은 모두 **`amr-cobot-sorting` 프로젝트 root에서 시작**합니다.
 
 프로젝트 root 예시 확인:
 
@@ -866,7 +875,7 @@ simulate_p3020:=false
 <summary>프로젝트 구조 · 주의 사항</summary>
 
 ```text
-cobot3-ws-c2/
+amr-cobot-sorting/
 ├── backend/              # FastAPI + PostgreSQL + MQTT backend
 ├── frontend/             # React Control Tower
 ├── isaac_sim/
